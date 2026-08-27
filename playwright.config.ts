@@ -1,5 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-import { defaultAppOrigin } from "./lib/config";
+import { appOrigin } from "./lib/config";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -8,7 +8,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: "list",
   use: {
-    baseURL: defaultAppOrigin,
+    baseURL: appOrigin,
     trace: "on-first-retry",
   },
   projects: [
@@ -19,7 +19,7 @@ export default defineConfig({
   ],
   webServer: {
     command: "pnpm dev",
-    url: defaultAppOrigin,
+    url: appOrigin,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

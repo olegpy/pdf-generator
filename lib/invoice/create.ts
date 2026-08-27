@@ -1,3 +1,4 @@
+import { appOrigin } from "../config";
 import { demoIssuer } from "./demo";
 import { nextInvoiceNumber, renderInvoicePdf } from "./pdf/render";
 import {
@@ -84,7 +85,7 @@ export function originFromRequest(req?: Request) {
   if (req) {
     return new URL(req.url).origin;
   }
-  return process.env.APP_URL ?? "http://localhost:3000";
+  return appOrigin;
 }
 
 export function originFromHeaders(
@@ -93,7 +94,7 @@ export function originFromHeaders(
   const host =
     headerList.get("x-forwarded-host") ?? headerList.get("host");
   if (!host) {
-    return process.env.APP_URL ?? "http://localhost:3000";
+    return appOrigin;
   }
   const proto =
     headerList.get("x-forwarded-proto") ??
