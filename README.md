@@ -25,3 +25,13 @@ Tools:
 - `get_issuer` — demo seller (From)
 - `generate_invoice` — create the PDF
 
+## Test
+
+```bash
+pnpm test
+pnpm test:e2e:install
+pnpm test:e2e
+```
+
+`pnpm test` runs Vitest on schema, form mapping, and PDF create. `pnpm test:e2e:install` downloads Chromium once. Playwright starts the app, checks the homepage, fills the example invoice, and downloads the PDF. Chromium only.
+
