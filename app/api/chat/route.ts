@@ -47,7 +47,7 @@ export async function POST(req: Request) {
   const tools = invoiceAiTools(origin);
 
   const result = streamText({
-    model: openai("gpt-4o"),
+    model: openai.chat("gpt-4o"),
     instructions,
     messages: await convertToModelMessages(messages, {
       tools,
