@@ -7,6 +7,7 @@ import {
   generateInvoiceOutputSchema,
   invoiceLineInputSchema,
   issuerSchema,
+  type InvoiceDraft,
   type InvoiceLineInput,
 } from "../schema";
 
@@ -28,34 +29,83 @@ function messageText(messages: ModelMessage[]) {
   return chunks.join("\n");
 }
 
-function linesFromUserText(text: string): InvoiceLineInput[] {
-  const priced: InvoiceLineInput[] = [];
-  const withQty =
-    /(\d+(?:[.,]\d+)?)\s+([^$\n]+?)\s+(?:at|for|по|за|x|×)\s*\$?\s*(\d+(?:[.,]\d+)?)/gi;
-  for (const match of text.matchAll(withQty)) {
-    priced.push({
-      description: match[2].trim().replace(/[.,]$/, ""),
-      quantity: Number(match[1].replace(",", ".")),
-      unitPrice: Number(match[3].replace(",", ".")),
-    });
-  }
-  if (priced.length > 0) return priced;
-
-  for (const match of text.matchAll(/([^,\n]+?)\s+\$(\d+(?:[.,]\d+)?)/g)) {
-    const description = match[1].replace(/^.*?:/, "").trim();
-    if (!description) continue;
-    priced.push({
-      description,
-      quantity: 1,
-      unitPrice: Number(match[2].replace(",", ".")),
-    });
-  }
-  return priced;
+function amount(value: string) {
+  return Number(value.replace(",", "."));
 }
 
-function lastUserText(messages: ModelMessage[]) {
+const lineFormats = [
+  {
+    // "Development, qty 10, $150"
+    pattern:
+      /([^;:\n]+?),\s*qty\s+(\d+(?:[.,]\d+)?),\s*\$?\s*(\d+(?:[.,]\d+)?)/gi,
+    read: (match: RegExpMatchArray) => ({
+      description: match[1].trim(),
+      quantity: amount(match[2]),
+      unitPrice: amount(match[3]),
+    }),
+  },
+  {
+    // "10 licenses at $150"
+    pattern:
+      /(\d+(?:[.,]\d+)?)\s+([^$\n]+?)\s+(?:at|for|по|за|x|×)\s*\$?\s*(\d+(?:[.,]\d+)?)/gi,
+    read: (match: RegExpMatchArray) => ({
+      description: match[2].trim().replace(/[.,]$/, ""),
+      quantity: amount(match[1]),
+      unitPrice: amount(match[3]),
+    }),
+  },
+  {
+    // "Design $500"
+    pattern: /([^,\n]+?)\s+\$(\d+(?:[.,]\d+)?)/g,
+    read: (match: RegExpMatchArray) => ({
+      description: match[1].replace(/^.*?:/, "").trim(),
+      quantity: 1,
+      unitPrice: amount(match[2]),
+    }),
+  },
+];
+
+export function linesFromUserText(text: string): InvoiceLineInput[] {
+  for (const { pattern, read } of lineFormats) {
+    const lines = [...text.matchAll(pattern)]
+      .map(read)
+      .filter((line) => line.description !== "");
+    if (lines.length > 0) return lines;
+  }
+  return [];
+}
+
+export function lastUserText(messages: ModelMessage[]) {
   const texts = messageText(messages).split("\n").filter(Boolean);
   return texts.at(-1)?.trim() ?? "";
+}
+
+export const generateInvoiceToolInput = z.object({
+  counterparty: counterpartySchema.optional(),
+  lines: z.array(invoiceLineInputSchema).optional().default([]),
+  notes: z.string().optional(),
+  currency: z.string().optional(),
+});
+
+/** The model may call the tool with no arguments, so recover them from the chat. */
+export function draftFromToolInput(
+  input: z.infer<typeof generateInvoiceToolInput>,
+  messages: ModelMessage[],
+): InvoiceDraft {
+  const name = input.counterparty?.name?.trim() || lastUserText(messages);
+  const lines =
+    input.lines.length > 0
+      ? input.lines
+      : linesFromUserText(messageText(messages));
+
+  if (!name) {
+    throw new Error("Counterparty name is required.");
+  }
+  if (lines.length === 0) {
+    throw new Error("At least one invoice line is required.");
+  }
+
+  return { ...input, counterparty: { ...input.counterparty, name }, lines };
 }
 
 export function invoiceAiTools(origin: string) {
@@ -70,32 +120,11 @@ export function invoiceAiTools(origin: string) {
     generate_invoice: tool({
       description:
         "Create a PDF invoice. Required: counterparty.name and line items. Do not wait for address or email.",
-      inputSchema: z.object({
-        counterparty: counterpartySchema,
-        lines: z.array(invoiceLineInputSchema).optional().default([]),
-        notes: z.string().optional(),
-        currency: z.string().optional(),
-      }),
+      inputSchema: generateInvoiceToolInput,
       outputSchema: generateInvoiceOutputSchema,
       execute: async (input, { messages }) => {
-        const history = messages ?? [];
-        const name = input.counterparty.name.trim() || lastUserText(history);
-        const lines =
-          input.lines && input.lines.length > 0
-            ? input.lines
-            : linesFromUserText(messageText(history));
-        if (!name) {
-          throw new Error("Counterparty name is required.");
-        }
-        if (lines.length === 0) {
-          throw new Error("At least one invoice line is required.");
-        }
         const { result } = await createInvoice(
-          {
-            ...input,
-            counterparty: { ...input.counterparty, name },
-            lines,
-          },
+          draftFromToolInput(input, messages ?? []),
           origin,
         );
         return result;
