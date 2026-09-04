@@ -41,7 +41,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
 
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push'
 
     steps:
       - name: Checkout
@@ -49,6 +49,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -62,13 +64,14 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Deploy to Vercel
+      - name: Link Vercel project
+        run: pnpm dlx vercel link --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID" --project="$VERCEL_PROJECT_ID"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: |
-          pnpm dlx vercel deploy --prod \
-            --token=$VERCEL_TOKEN \
-            --scope=$VERCEL_ORG_ID \
-            --project-id=$VERCEL_PROJECT_ID
+
+      - name: Deploy to Vercel
+        run: pnpm dlx vercel deploy --prod --yes --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
