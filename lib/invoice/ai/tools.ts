@@ -129,6 +129,15 @@ export function invoiceAiTools(origin: string) {
         );
         return result;
       },
+      toModelOutput: ({ output }) => ({
+        type: "json",
+        value: {
+          number: output.number,
+          counterparty: output.counterparty.name,
+          lines: output.lines,
+          totals: output.totals,
+        },
+      }),
     }),
   };
 }

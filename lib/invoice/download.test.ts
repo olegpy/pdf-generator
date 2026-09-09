@@ -4,7 +4,9 @@ import { createInvoice } from "./create";
 import { exampleLines } from "./demo";
 import {
   decodeInvoiceSnapshot,
+  encodeInvoiceSnapshot,
   loadInvoiceFile,
+  snapshotFromInvoice,
 } from "./download";
 import { invoiceStore } from "./store";
 
@@ -18,7 +20,7 @@ describe("invoice download snapshot", () => {
       appOrigin,
     );
 
-    const token = new URL(invoice.downloadUrl).searchParams.get("t");
+    const token = encodeInvoiceSnapshot(snapshotFromInvoice(invoice));
     expect(token).toBeTruthy();
 
     const snapshot = decodeInvoiceSnapshot(token ?? "");
@@ -46,7 +48,7 @@ describe("invoice download snapshot", () => {
       },
       appOrigin,
     );
-    const token = new URL(invoice.downloadUrl).searchParams.get("t");
+    const token = encodeInvoiceSnapshot(snapshotFromInvoice(invoice));
     invoiceStore.delete(invoice.id);
 
     await expect(

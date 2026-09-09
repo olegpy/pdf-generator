@@ -43,12 +43,6 @@ export function decodeInvoiceSnapshot(token: string) {
   }
 }
 
-export function invoiceDownloadUrl(origin: string, snapshot: InvoiceSnapshot) {
-  const url = new URL(`/api/invoices/${snapshot.id}`, origin);
-  url.searchParams.set("t", encodeInvoiceSnapshot(snapshot));
-  return url.toString();
-}
-
 export async function loadInvoiceFile(id: string, token?: string | null) {
   const stored = getInvoice(id);
   if (stored) {
