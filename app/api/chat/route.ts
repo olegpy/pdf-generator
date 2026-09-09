@@ -21,7 +21,7 @@ Ask only for the counterparty name if it is missing. Never ask for address or em
 Reuse line items from the first user message.
 
 As soon as you have a counterparty name and lines, call generate_invoice.
-After the PDF is ready, give the download URL and totals.`;
+After the PDF is ready, summarize the line items and totals. Do not paste a download URL or markdown link.`;
 
 function toolNamesFromMessages(messages: ModelMessage[]) {
   const names = new Set<string>();
