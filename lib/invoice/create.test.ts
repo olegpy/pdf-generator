@@ -146,9 +146,10 @@ describe("createInvoice", () => {
     expect(invoice.issuer).toEqual(demoIssuer);
     expect(invoice.totals.total).toBe(1520);
     expect(invoice.filename).toBe(`${invoice.number}.pdf`);
-    expect(invoice.downloadUrl).toBe(
+    expect(invoice.downloadUrl).toContain(
       `${appOrigin}/api/invoices/${invoice.id}`,
     );
+    expect(new URL(invoice.downloadUrl).searchParams.get("t")).toBeTruthy();
     expect(result.invoiceId).toBe(invoice.id);
     expect(new TextDecoder().decode(pdf.slice(0, 5))).toBe("%PDF-");
     expect(getInvoice(invoice.id)?.filename).toBe(invoice.filename);

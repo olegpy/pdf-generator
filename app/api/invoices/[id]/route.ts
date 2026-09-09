@@ -1,14 +1,14 @@
 import type { NextRequest } from "next/server";
-import { getInvoice } from "@/lib/invoice/store";
+import { loadInvoiceFile } from "@/lib/invoice/download";
 
 export const runtime = "nodejs";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   ctx: RouteContext<"/api/invoices/[id]">,
 ) {
   const { id } = await ctx.params;
-  const invoice = getInvoice(id);
+  const invoice = await loadInvoiceFile(id, req.nextUrl.searchParams.get("t"));
 
   if (!invoice) {
     return Response.json({ error: "Invoice not found" }, { status: 404 });
