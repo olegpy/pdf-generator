@@ -1,5 +1,6 @@
 import { appOrigin } from "../config";
 import { demoIssuer } from "./demo";
+import { invoiceDownloadUrl, snapshotFromInvoice } from "./download";
 import { nextInvoiceNumber, renderInvoicePdf } from "./pdf/render";
 import {
   invoiceDraftSchema,
@@ -35,7 +36,6 @@ export async function createInvoice(
   const lines = toInvoiceLines(input.lines);
   const subtotal = lines.reduce((sum, line) => sum + line.amount, 0);
   const filename = `${number}.pdf`;
-  const downloadUrl = `${origin}/api/invoices/${id}`;
 
   const { pdf } = await renderInvoicePdf({
     number,
@@ -47,7 +47,7 @@ export async function createInvoice(
     notes: input.notes,
   });
 
-  const invoice: Invoice = {
+  const invoiceFields = {
     id,
     number,
     issuedAt: issuedAt.toISOString(),
@@ -62,7 +62,10 @@ export async function createInvoice(
     },
     notes: input.notes,
     filename,
-    downloadUrl,
+  };
+  const invoice: Invoice = {
+    ...invoiceFields,
+    downloadUrl: invoiceDownloadUrl(origin, snapshotFromInvoice(invoiceFields)),
   };
 
   saveInvoice({
